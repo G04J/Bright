@@ -1,0 +1,227 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Users
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  activities ActivityEntry[]
+  foods      FoodEntry[]
+  sleeps     SleepEntry[]
+  hearts     HeartEntry[]
+  micros     MicroEntry[]
+  hydration  HydrationEntry[]
+  weights    WeightEntry[]
+  summaries  DailySummary[]
+}
+
+// Activity (steps, cardio, strength)
+
+model ActivityEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  timestamp DateTime @db.Timestamp()
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  metrics ActivityMetric[]
+
+  @@index([userId, timestamp])
+  @@map("activity_entries")
+}
+
+model ActivityMetric {
+  id      String       @id @default(cuid())
+  entryId String
+  type    ActivityType
+  value   Float
+
+  entry ActivityEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, type])
+  @@map("activity_metrics")
+}
+
+enum ActivityType {
+  STEPS
+  CARDIO
+  STRENGTH
+}
+
+model FoodEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  timestamp DateTime @db.Timestamp()
+
+  calories  Float?   // kcal consumed, provided by user
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  metrics FoodMetric[]
+
+  @@index([userId, timestamp])
+  @@map("food_entries")
+}
+
+
+enum MacroType {
+  CARBS
+  FATS
+  PROTEIN
+}
+
+// Sleep
+
+model SleepEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  timestamp DateTime @db.Timestamp()
+  hours     Float?
+  quality   Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timestamp])
+  @@map("sleep_entries")
+}
+
+// Heart
+
+model HeartEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  timestamp DateTime @db.Timestamp()
+  bpm       Int?
+  resting   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timestamp])
+  @@map("heart_entries")
+}
+
+// Micros (potassium, calcium, sodium)
+
+model MicroEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  timestamp DateTime @db.Timestamp()
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  metrics MicroMetric[]
+
+  @@index([userId, timestamp])
+  @@map("micro_entries")
+}
+
+model MicroMetric {
+  id       String   @id @default(cuid())
+  entryId  String
+  type     MicroType
+  amountMg Float
+
+  entry MicroEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, type])
+  @@map("micro_metrics")
+}
+
+enum MicroType {
+  POTASSIUM
+  CALCIUM
+  SODIUM
+}
+
+// Hydration
+
+model HydrationEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  timestamp DateTime @db.Timestamp()
+  liters    Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timestamp])
+  @@map("hydration_entries")
+}
+
+// Weight
+
+model WeightEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  timestamp DateTime @db.Timestamp()
+  weightKg  Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, timestamp])
+  @@map("weight_entries")
+}
+
+// Daily Summary (for insights)
+
+model DailySummary {
+  id        String   @id @default(cuid())
+  userId    String
+  day       DateTime @db.Date
+
+  // Activity
+  stepsTotal      Int @default(0)
+  cardioMinutes   Int @default(0)
+  strengthMinutes Int @default(0)
+
+  // Food (macros)
+  carbsGrams   Float @default(0)
+  fatsGrams    Float @default(0)
+  proteinGrams Float @default(0)
+
+  // Sleep
+  sleepHours      Float?
+  sleepQualityAvg Float?
+
+  // Heart
+  restingBpmAvg Float?
+  bpmAvg        Float?
+
+  // Micros (mg)
+  potassiumMg Float @default(0)
+  calciumMg   Float @default(0)
+  sodiumMg    Float @default(0)
+
+  // Hydration / Weight
+  hydrationLiters Float @default(0)
+  weightKg        Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, day])
+  @@index([userId, day])
+  @@map("daily_summaries")
+}
