@@ -3,13 +3,13 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import express from 'express';
 
 import { JwtAuthGuard } from '../../services/auth/jwt.guard';
-import { UserService } from '../../services/user/user.service';
-import { IngestHealthDto } from '../../dtos/user/ingest-health.dto';
+import { userDataIngestionService } from '../../services/user/userDataIngestion.service';
+import { IngestHealthDto } from '../../dtos/user/userDataIngestion.dto';
 
 @ApiTags('Users')
 @Controller('users')
-export class UserController {
-  constructor(private readonly userService: UserService) {}
+export class UserDataIngestionController {
+  constructor(private readonly userDataIngestionService: userDataIngestionService) {}
 
   @Post(':userId/health-data')
   @ApiBearerAuth()
@@ -25,6 +25,6 @@ export class UserController {
       throw new ForbiddenException('You can only ingest data for your own userId');
     }
 
-    return this.userService.ingestHealthData(userId, dto);
+    return this.userDataIngestionService.ingestHealthData(userId, dto);
   }
 }
