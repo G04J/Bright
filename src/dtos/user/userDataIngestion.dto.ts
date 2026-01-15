@@ -13,14 +13,22 @@ import { Type } from 'class-transformer';
 class ActivityDto {
   @ApiPropertyOptional() @IsOptional() @IsInt() @Min(0) steps?: number;
   @ApiPropertyOptional() @IsOptional() @IsInt() @Min(0) cardioMinutes?: number;
-  @ApiPropertyOptional() @IsOptional() @IsInt() @Min(0) strengthMinutes?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  strengthMinutes?: number;
 }
 
 class FoodDto {
   @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) calories?: number;
   @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) carbsGrams?: number;
   @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) fatsGrams?: number;
-  @ApiPropertyOptional() @IsOptional() @IsNumber() @Min(0) proteinGrams?: number;
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  proteinGrams?: number;
 }
 
 class SleepDto {

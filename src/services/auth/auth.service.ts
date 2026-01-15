@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
@@ -16,12 +20,12 @@ export class AuthService {
 
   /**
    * Registers a new user in the system.
-   * 
+   *
    * @param email - The email address of the user
    * @param password - The plaintext password to be hashed and stored
    * @returns An object containing userId, email, JWT token, and success message
    * @throws {BadRequestException} If a user with the given email already exists
-   * 
+   *
    * @example
    * ```typescript
    * const result = await authService.register('user@example.com', 'password123');
@@ -62,12 +66,12 @@ export class AuthService {
 
   /**
    * Authenticates a user with email and password.
-   * 
+   *
    * @param email - The email address of the user
    * @param password - The plaintext password to verify
    * @returns An object containing userId, email, JWT token, and success message
    * @throws {UnauthorizedException} If the email doesn't exist or password is incorrect
-   * 
+   *
    * @example
    * ```typescript
    * const result = await authService.login('user@example.com', 'password123');
@@ -104,11 +108,11 @@ export class AuthService {
 
   /**
    * Validates a JWT token and returns its payload.
-   * 
+   *
    * @param token - The JWT token to validate
    * @returns The decoded token payload containing user information
    * @throws {UnauthorizedException} If the token is invalid, expired, or malformed
-   * 
+   *
    * @example
    * ```typescript
    * const payload = await authService.validateToken('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');

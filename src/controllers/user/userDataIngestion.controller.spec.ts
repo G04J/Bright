@@ -13,10 +13,17 @@ describe('UserController - ingestHealth', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [UserDataIngestionController],
-      providers: [{ provide: userDataIngestionService, useValue: userDataIngestionServiceMock }],
+      providers: [
+        {
+          provide: userDataIngestionService,
+          useValue: userDataIngestionServiceMock,
+        },
+      ],
     }).compile();
 
-    controller = module.get<UserDataIngestionController>(UserDataIngestionController);
+    controller = module.get<UserDataIngestionController>(
+      UserDataIngestionController,
+    );
     jest.clearAllMocks();
   });
 
@@ -24,20 +31,35 @@ describe('UserController - ingestHealth', () => {
     const req: any = { user: { userId: 'jwt-user' } };
 
     expect(() =>
-      controller.ingestHealth('path-user', { activity: { steps: 10 } } as any, req),
+      controller.ingestHealth(
+        'path-user',
+        { activity: { steps: 10 } } as any,
+        req,
+      ),
     ).toThrow(ForbiddenException);
 
-    expect(userDataIngestionServiceMock.ingestHealthData).not.toHaveBeenCalled();
+    expect(
+      userDataIngestionServiceMock.ingestHealthData,
+    ).not.toHaveBeenCalled();
   });
 
   it('calls userDataIngestionService when JWT userId matches path userId', async () => {
     const req: any = { user: { userId: 'same-user' } };
 
-    userDataIngestionServiceMock.ingestHealthData.mockResolvedValueOnce({ ok: true });
+    userDataIngestionServiceMock.ingestHealthData.mockResolvedValueOnce({
+      ok: true,
+    });
 
-    const res = await controller.ingestHealth('same-user', { activity: { steps: 10 } } as any, req);
+    const res = await controller.ingestHealth(
+      'same-user',
+      { activity: { steps: 10 } } as any,
+      req,
+    );
 
-    expect(userDataIngestionServiceMock.ingestHealthData).toHaveBeenCalledWith('same-user', expect.any(Object));
+    expect(userDataIngestionServiceMock.ingestHealthData).toHaveBeenCalledWith(
+      'same-user',
+      expect.any(Object),
+    );
     expect(res).toEqual({ ok: true });
   });
 });

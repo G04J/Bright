@@ -18,10 +18,8 @@ import { UserDataIngestionModule } from './user/userDataIngestion.module';
     ]),
     PrismaModule,
     AuthModule,
-    UserDataIngestionModule
+    UserDataIngestionModule,
   ],
-  providers: [
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
-  ],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

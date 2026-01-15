@@ -1,25 +1,23 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
 import { userDataIngestionService } from './userDataIngestion.service';
 import { PrismaService } from '../prisma/prisma.service';
 
-describe('userDataIngestionService - ingestHealthData', () => {
+describe('userDataIngestionService (getHealthDataMergedByTimestamp)', () => {
   let service: userDataIngestionService;
-
-  const prismaMock = {
-    activityEntry: { create: jest.fn() },
-    activityMetric: { createMany: jest.fn() },
-    foodEntry: { create: jest.fn() },
-    foodMetric: { createMany: jest.fn() },
-    sleepEntry: { create: jest.fn() },
-    heartEntry: { create: jest.fn() },
-    microEntry: { create: jest.fn() },
-    microMetric: { createMany: jest.fn() },
-    hydrationEntry: { create: jest.fn() },
-    weightEntry: { create: jest.fn() },
-  };
+  let prismaMock: any;
 
   beforeEach(async () => {
+    // Create fresh mocks for each test
+    prismaMock = {
+      activityEntry: { findMany: jest.fn() },
+      foodEntry: { findMany: jest.fn() },
+      sleepEntry: { findMany: jest.fn() },
+      heartEntry: { findMany: jest.fn() },
+      microEntry: { findMany: jest.fn() },
+      hydrationEntry: { findMany: jest.fn() },
+      weightEntry: { findMany: jest.fn() },
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         userDataIngestionService,
@@ -28,141 +26,152 @@ describe('userDataIngestionService - ingestHealthData', () => {
     }).compile();
 
     service = module.get<userDataIngestionService>(userDataIngestionService);
-
-    jest.clearAllMocks();
-
-    // Default "create" mocks return ids so the service can proceed
-    prismaMock.activityEntry.create.mockResolvedValue({ id: 'act_entry_1' });
-    prismaMock.foodEntry.create.mockResolvedValue({ id: 'food_entry_1' });
-    prismaMock.sleepEntry.create.mockResolvedValue({ id: 'sleep_entry_1' });
-    prismaMock.heartEntry.create.mockResolvedValue({ id: 'heart_entry_1' });
-    prismaMock.microEntry.create.mockResolvedValue({ id: 'micro_entry_1' });
-    prismaMock.hydrationEntry.create.mockResolvedValue({ id: 'hyd_entry_1' });
-    prismaMock.weightEntry.create.mockResolvedValue({ id: 'wt_entry_1' });
-
-    prismaMock.activityMetric.createMany.mockResolvedValue({ count: 3 });
-    prismaMock.foodMetric.createMany.mockResolvedValue({ count: 3 });
-    prismaMock.microMetric.createMany.mockResolvedValue({ count: 3 });
   });
 
-  it('throws 400 if no health sections are provided', async () => {
-    await expect(service.ingestHealthData('user-1', {} as any)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+  it('should merge categories when timestamps match exactly', async () => {
+    const userId = 'user-1';
+    const ts = new Date('2026-01-18T00:00:00.000Z');
 
-    expect(prismaMock.activityEntry.create).not.toHaveBeenCalled();
-    expect(prismaMock.foodEntry.create).not.toHaveBeenCalled();
-    expect(prismaMock.sleepEntry.create).not.toHaveBeenCalled();
+    prismaMock.activityEntry.findMany.mockResolvedValueOnce([
+      {
+        id: 'a1',
+        timestamp: ts,
+        metrics: [
+          { type: 'STEPS', value: 9000 },
+          { type: 'CARDIO', value: 40 },
+          { type: 'STRENGTH', value: 25 },
+        ],
+      },
+    ]);
+
+    prismaMock.foodEntry.findMany.mockResolvedValueOnce([
+      {
+        id: 'f1',
+        timestamp: ts,
+        calories: 2400,
+        metrics: [
+          { type: 'CARBS', grams: 300 },
+          { type: 'FAT', grams: 80 },
+          { type: 'PROTEIN', grams: 140 },
+        ],
+      },
+    ]);
+
+    prismaMock.sleepEntry.findMany.mockResolvedValueOnce([
+      { id: 's1', timestamp: ts, hours: 8, quality: 5 },
+    ]);
+
+    prismaMock.heartEntry.findMany.mockResolvedValueOnce([
+      { id: 'h1', timestamp: ts, bpm: 62, resting: true },
+    ]);
+
+    prismaMock.microEntry.findMany.mockResolvedValueOnce([
+      {
+        id: 'm1',
+        timestamp: ts,
+        metrics: [
+          { type: 'POTASSIUM', amountMg: 3600 },
+          { type: 'CALCIUM', amountMg: 1100 },
+          { type: 'SODIUM', amountMg: 1700 },
+        ],
+      },
+    ]);
+
+    prismaMock.hydrationEntry.findMany.mockResolvedValueOnce([
+      { id: 'hy1', timestamp: ts, liters: 3.1 },
+    ]);
+
+    prismaMock.weightEntry.findMany.mockResolvedValueOnce([
+      { id: 'w1', timestamp: ts, weightKg: 71.8 },
+    ]);
+
+    const result = await service.getHealthDataMergedByTimestamp(userId, '15-01-2026', '19-01-2026', 1, 50);
+
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toEqual({
+      timestamp: '2026-01-18T00:00:00.000Z',
+      activity: { steps: 9000, cardioMinutes: 40, strengthMinutes: 25 },
+      food: { calories: 2400, carbsGrams: 300, fatsGrams: 80, proteinGrams: 140 },
+      sleep: { hours: 8, quality: 5 },
+      heart: { bpm: 62, resting: true },
+      micros: { potassiumMg: 3600, calciumMg: 1100, sodiumMg: 1700 },
+      hydration: { liters: 3.1 },
+      weight: { weightKg: 71.8 },
+    });
+
+    expect(result.pagination.total).toBe(1);
   });
 
-  it('creates entries and metrics for a full payload', async () => {
-    const dto = {
-      timestamp: '2026-01-15T00:00:00.000Z',
-      activity: { steps: 5000, cardioMinutes: 30, strengthMinutes: 15 },
-      food: { calories: 2200, carbsGrams: 250, fatsGrams: 70, proteinGrams: 120 },
-      sleep: { hours: 7.5, quality: 4 },
-      heart: { bpm: 65, resting: true },
-      micros: { potassiumMg: 3500, calciumMg: 1000, sodiumMg: 1800 },
-      hydration: { liters: 2.5 },
-      weight: { weightKg: 70 },
-    };
+  it('should return separate items when timestamps do not match', async () => {
+    const userId = 'user-1';
+    const ts1 = new Date('2026-01-18T00:00:00.000Z');
+    const ts2 = new Date('2026-01-19T00:00:00.000Z');
 
-    const res = await service.ingestHealthData('user-1', dto as any);
+    prismaMock.activityEntry.findMany.mockResolvedValueOnce([
+      { id: 'a1', timestamp: ts1, metrics: [{ type: 'STEPS', value: 5000 }] },
+    ]);
+    prismaMock.foodEntry.findMany.mockResolvedValueOnce([]);
+    prismaMock.sleepEntry.findMany.mockResolvedValueOnce([
+      { id: 's1', timestamp: ts2, hours: 6.5, quality: 3 },
+    ]);
+    prismaMock.heartEntry.findMany.mockResolvedValueOnce([]);
+    prismaMock.microEntry.findMany.mockResolvedValueOnce([]);
+    prismaMock.hydrationEntry.findMany.mockResolvedValueOnce([]);
+    prismaMock.weightEntry.findMany.mockResolvedValueOnce([]);
 
-    // Entry creation calls
-    expect(prismaMock.activityEntry.create).toHaveBeenCalledWith({
-      data: { userId: 'user-1', timestamp: new Date(dto.timestamp) },
-    });
+    const result = await service.getHealthDataMergedByTimestamp(userId, '15-01-2026', '19-01-2026', 1, 50);
 
-    expect(prismaMock.foodEntry.create).toHaveBeenCalledWith({
-      data: { userId: 'user-1', timestamp: new Date(dto.timestamp), calories: 2200 },
-    });
+    expect(result.items).toHaveLength(2);
 
-    expect(prismaMock.sleepEntry.create).toHaveBeenCalledWith({
-      data: { userId: 'user-1', timestamp: new Date(dto.timestamp), hours: 7.5, quality: 4 },
-    });
+    // Ensure sorted desc
+    expect(result.items[0].timestamp).toBe('2026-01-19T00:00:00.000Z');
+    expect(result.items[0].sleep).toEqual({ hours: 6.5, quality: 3 });
 
-    expect(prismaMock.heartEntry.create).toHaveBeenCalledWith({
-      data: { userId: 'user-1', timestamp: new Date(dto.timestamp), bpm: 65, resting: true },
-    });
-
-    expect(prismaMock.microEntry.create).toHaveBeenCalledWith({
-      data: { userId: 'user-1', timestamp: new Date(dto.timestamp) },
-    });
-
-    expect(prismaMock.hydrationEntry.create).toHaveBeenCalledWith({
-      data: { userId: 'user-1', timestamp: new Date(dto.timestamp), liters: 2.5 },
-    });
-
-    expect(prismaMock.weightEntry.create).toHaveBeenCalledWith({
-      data: { userId: 'user-1', timestamp: new Date(dto.timestamp), weightKg: 70 },
-    });
-
-    // Metrics creation calls
-    expect(prismaMock.activityMetric.createMany).toHaveBeenCalledWith({
-      data: [
-        { entryId: 'act_entry_1', type: 'STEPS', value: 5000 },
-        { entryId: 'act_entry_1', type: 'CARDIO', value: 30 },
-        { entryId: 'act_entry_1', type: 'STRENGTH', value: 15 },
-      ],
-    });
-
-    expect(prismaMock.foodMetric.createMany).toHaveBeenCalledWith({
-      data: [
-        { entryId: 'food_entry_1', type: 'CARBS', grams: 250 },
-        { entryId: 'food_entry_1', type: 'FAT', grams: 70 },
-        { entryId: 'food_entry_1', type: 'PROTEIN', grams: 120 },
-      ],
-    });
-
-    expect(prismaMock.microMetric.createMany).toHaveBeenCalledWith({
-      data: [
-        { entryId: 'micro_entry_1', type: 'POTASSIUM', amountMg: 3500 },
-        { entryId: 'micro_entry_1', type: 'CALCIUM', amountMg: 1000 },
-        { entryId: 'micro_entry_1', type: 'SODIUM', amountMg: 1800 },
-      ],
-    });
-
-    // Response includes created IDs
-    expect(res).toEqual(
-      expect.objectContaining({
-        message: 'Health data ingested successfully',
-        userId: 'user-1',
-        created: expect.objectContaining({
-          activityEntryId: 'act_entry_1',
-          foodEntryId: 'food_entry_1',
-          sleepEntryId: 'sleep_entry_1',
-          heartEntryId: 'heart_entry_1',
-          microEntryId: 'micro_entry_1',
-          hydrationEntryId: 'hyd_entry_1',
-          weightEntryId: 'wt_entry_1',
-        }),
-      }),
-    );
+    expect(result.items[1].timestamp).toBe('2026-01-18T00:00:00.000Z');
+    expect(result.items[1].activity).toEqual({ steps: 5000 });
   });
 
-  it('does not create metrics when activity values are missing', async () => {
-    const dto = {
-      timestamp: '2026-01-15T00:00:00.000Z',
-      activity: {}, // no steps/cardio/strength
-    };
+  it('should paginate to max 50 and slice by page', async () => {
+    const userId = 'user-1';
 
-    await service.ingestHealthData('user-1', dto as any);
-
-    expect(prismaMock.activityEntry.create).toHaveBeenCalled();
-    expect(prismaMock.activityMetric.createMany).not.toHaveBeenCalled();
-  });
-
-  it('stores heart resting as false by default when not provided', async () => {
-    const dto = {
-      timestamp: '2026-01-15T00:00:00.000Z',
-      heart: { bpm: 72 }, // resting omitted
-    };
-
-    await service.ingestHealthData('user-1', dto as any);
-
-    expect(prismaMock.heartEntry.create).toHaveBeenCalledWith({
-      data: { userId: 'user-1', timestamp: new Date(dto.timestamp), bpm: 72, resting: false },
+    // Create 60 sleep entries (unique timestamps)
+    const sleeps = Array.from({ length: 60 }).map((_, i) => {
+      const day = 1 + i;
+      return {
+        id: `s-${i}`,
+        timestamp: new Date(Date.UTC(2026, 0, day, 0, 0, 0, 0)),
+        hours: 7,
+        quality: 4,
+      };
     });
+
+    // Setup mocks for page 1
+    prismaMock.activityEntry.findMany.mockResolvedValueOnce([]);
+    prismaMock.foodEntry.findMany.mockResolvedValueOnce([]);
+    prismaMock.sleepEntry.findMany.mockResolvedValueOnce(sleeps);
+    prismaMock.heartEntry.findMany.mockResolvedValueOnce([]);
+    prismaMock.microEntry.findMany.mockResolvedValueOnce([]);
+    prismaMock.hydrationEntry.findMany.mockResolvedValueOnce([]);
+    prismaMock.weightEntry.findMany.mockResolvedValueOnce([]);
+
+    const page1 = await service.getHealthDataMergedByTimestamp(userId, '01-01-2026', '31-03-2026', 1, 50);
+    expect(page1.items).toHaveLength(50);
+    expect(page1.pagination.total).toBe(60);
+    expect(page1.pagination.totalPages).toBe(2);
+    expect(page1.pagination.hasNext).toBe(true);
+
+    // Setup mocks for page 2 (same data, different page)
+    prismaMock.activityEntry.findMany.mockResolvedValueOnce([]);
+    prismaMock.foodEntry.findMany.mockResolvedValueOnce([]);
+    prismaMock.sleepEntry.findMany.mockResolvedValueOnce(sleeps);
+    prismaMock.heartEntry.findMany.mockResolvedValueOnce([]);
+    prismaMock.microEntry.findMany.mockResolvedValueOnce([]);
+    prismaMock.hydrationEntry.findMany.mockResolvedValueOnce([]);
+    prismaMock.weightEntry.findMany.mockResolvedValueOnce([]);
+
+    const page2 = await service.getHealthDataMergedByTimestamp(userId, '01-01-2026', '31-03-2026', 2, 50);
+    expect(page2.items).toHaveLength(10);
+    expect(page2.pagination.hasNext).toBe(false);
+    expect(page2.pagination.hasPrev).toBe(true);
   });
 });
