@@ -112,3 +112,26 @@ The summary includes totals and averages such as:
 Averages are calculated using only days where the corresponding metric was recorded. Days without data are excluded from the denominator to avoid skewed results.
 
 This design allows the application to serve analytics and insights efficiently while keeping raw health data intact for detailed inspection when needed.
+
+## Further Improvements that could be done with more time
+
+There are a few areas that would be worth improving next as the project matures.
+
+### End to End Testing
+Add end to end tests that spin up the API and database together and validate full request flows. This would catch integration issues that unit tests cannot, such as authentication wiring, validation pipes, Prisma queries, and real HTTP responses.
+
+### Dedicated Test Directory
+Move tests into a separate top level `test/` directory. This keeps the `src/` folder focused on application code and makes it easier to manage unit, integration, and end to end test suites independently.
+
+### Improve Summary Fetching Logic
+The current daily summary retrieval can be improved by:
+- Adding clearer rules for what counts as "recorded" (for example, distinguishing missing data from valid zero values).
+- Supporting richer summary outputs, like per day breakdowns alongside totals.
+- Reducing coupling between ingestion and summary logic if the project grows.
+
+### Increase Coverage Quality
+Line coverage is in a good place, but function coverage can remain low when only main branches are exercised. This will raise function coverage and make the suite more representative of real usage.
+
+### Split userDataIngestion.service.ts into Smaller Modules
+The `userDataIngestion.service.ts` file is currently doing ingestion, merging, and summary rebuilding in one place. Splitting it into smaller files would improve readability and long term maintainability. 
+
