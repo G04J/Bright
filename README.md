@@ -18,4 +18,12 @@ For any protected route, the client must include the JWT in the Authorization he
 
 ## rate limitng to protect the API 
 
+We have added a rate limit of 20 requests per 60 seconds (per IP) to protect against DDOS attacks. 
+
+## testing 
+
+### auth 
+Unit tests for AuthController and AuthService using Jest and mocks - tests internal implementation, service calls, error handling, and return values in isolation (whitebox testing).
+
+### health-data post request 
 
