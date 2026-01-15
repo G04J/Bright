@@ -5,6 +5,7 @@ import { APP_GUARD } from '@nestjs/core';
 
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
+import { UserDataIngestionModule } from './user/userDataIngestion.module';
 
 @Module({
   imports: [
@@ -17,9 +18,8 @@ import { AuthModule } from './auth/auth.module';
     ]),
     PrismaModule,
     AuthModule,
+    UserDataIngestionModule,
   ],
-  providers: [
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
-  ],
+  providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
 export class AppModule {}

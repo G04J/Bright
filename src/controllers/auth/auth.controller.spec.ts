@@ -36,7 +36,10 @@ describe('AuthController', () => {
 
     const result = await controller.register(dto);
 
-    expect(mockAuthService.register).toHaveBeenCalledWith(dto.email, dto.password);
+    expect(mockAuthService.register).toHaveBeenCalledWith(
+      dto.email,
+      dto.password,
+    );
     expect(result).toEqual(serviceResponse);
   });
 
@@ -60,8 +63,12 @@ describe('AuthController', () => {
   it('login propagates AuthService errors', async () => {
     const dto = { email: 'test@example.com', password: 'wrongpassword' };
 
-    mockAuthService.login.mockRejectedValueOnce(new Error('Invalid email or password'));
+    mockAuthService.login.mockRejectedValueOnce(
+      new Error('Invalid email or password'),
+    );
 
-    await expect(controller.login(dto)).rejects.toThrow('Invalid email or password');
+    await expect(controller.login(dto)).rejects.toThrow(
+      'Invalid email or password',
+    );
   });
 });
