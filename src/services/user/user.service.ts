@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { IngestHealthDto } from '../../controllers/user/dto/ingest-health.dto';
+import { IngestHealthDto } from '../../dtos/user/ingest-health.dto';
 
 @Injectable()
 export class UserService {

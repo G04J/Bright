@@ -4,7 +4,7 @@ import express from 'express';
 
 import { JwtAuthGuard } from '../../services/auth/jwt.guard';
 import { UserService } from '../../services/user/user.service';
-import { IngestHealthDto } from './dto/ingest-health.dto';
+import { IngestHealthDto } from '../../dtos/user/ingest-health.dto';
 
 @ApiTags('Users')
 @Controller('users')
