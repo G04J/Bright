@@ -87,13 +87,24 @@ describe('userDataIngestionService (getHealthDataMergedByTimestamp)', () => {
       { id: 'w1', timestamp: ts, weightKg: 71.8 },
     ]);
 
-    const result = await service.getHealthDataMergedByTimestamp(userId, '15-01-2026', '19-01-2026', 1, 50);
+    const result = await service.getHealthDataMergedByTimestamp(
+      userId,
+      '15-01-2026',
+      '19-01-2026',
+      1,
+      50,
+    );
 
     expect(result.items).toHaveLength(1);
     expect(result.items[0]).toEqual({
       timestamp: '2026-01-18T00:00:00.000Z',
       activity: { steps: 9000, cardioMinutes: 40, strengthMinutes: 25 },
-      food: { calories: 2400, carbsGrams: 300, fatsGrams: 80, proteinGrams: 140 },
+      food: {
+        calories: 2400,
+        carbsGrams: 300,
+        fatsGrams: 80,
+        proteinGrams: 140,
+      },
       sleep: { hours: 8, quality: 5 },
       heart: { bpm: 62, resting: true },
       micros: { potassiumMg: 3600, calciumMg: 1100, sodiumMg: 1700 },
@@ -121,7 +132,13 @@ describe('userDataIngestionService (getHealthDataMergedByTimestamp)', () => {
     prismaMock.hydrationEntry.findMany.mockResolvedValueOnce([]);
     prismaMock.weightEntry.findMany.mockResolvedValueOnce([]);
 
-    const result = await service.getHealthDataMergedByTimestamp(userId, '15-01-2026', '19-01-2026', 1, 50);
+    const result = await service.getHealthDataMergedByTimestamp(
+      userId,
+      '15-01-2026',
+      '19-01-2026',
+      1,
+      50,
+    );
 
     expect(result.items).toHaveLength(2);
 
@@ -155,11 +172,16 @@ describe('userDataIngestionService (getHealthDataMergedByTimestamp)', () => {
     prismaMock.hydrationEntry.findMany.mockResolvedValueOnce([]);
     prismaMock.weightEntry.findMany.mockResolvedValueOnce([]);
 
-    const page1 = await service.getHealthDataMergedByTimestamp(userId, '01-01-2026', '31-03-2026', 1, 50);
+    const page1 = await service.getHealthDataMergedByTimestamp(
+      userId,
+      '01-01-2026',
+      '31-03-2026',
+      1,
+      50,
+    );
     expect(page1.items).toHaveLength(50);
     expect(page1.pagination.total).toBe(60);
     expect(page1.pagination.totalPages).toBe(2);
     expect(page1.pagination.hasNext).toBe(true);
-
   });
 });

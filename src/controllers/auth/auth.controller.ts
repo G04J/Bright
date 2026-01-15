@@ -16,11 +16,11 @@ export class AuthController {
 
   /**
    * Registers a new user in the system.
-   * 
+   *
    * @param dto - Registration data containing email and password
    * @returns Object with userId, email, JWT token, and success message
    * @throws {BadRequestException} If user with email already exists
-   * 
+   *
    * @example
    * POST /auth/register
    * Body: { "email": "user@example.com", "password": "password123" }
@@ -35,11 +35,11 @@ export class AuthController {
 
   /**
    * Authenticates a user with email and password.
-   * 
+   *
    * @param dto - Login credentials containing email and password
    * @returns Object with userId, email, JWT token, and success message
    * @throws {UnauthorizedException} If credentials are invalid
-   * 
+   *
    * @example
    * POST /auth/login
    * Body: { "email": "user@example.com", "password": "password123" }

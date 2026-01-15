@@ -13,9 +13,9 @@ export class AppController {
 
   /**
    * Health check endpoint that returns a welcome message.
-   * 
+   *
    * @returns A greeting message indicating the API is running
-   * 
+   *
    * @example
    * GET /
    * Returns: "Hello World!"

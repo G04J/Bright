@@ -12,13 +12,11 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import express from 'express';
 
-
 import { JwtAuthGuard } from '../../services/auth/jwt.guard';
 import { userDataIngestionService } from '../../services/user/userDataIngestion.service';
 import { IngestHealthDto } from '../../dtos/user/userDataIngestion.dto';
 import { GetHealthDataQueryDto } from '../../dtos/user/getHealthDataQuery.dto';
 import { GetSummaryQueryDto } from '../../dtos/user/getSummaryQuery.dto';
-
 
 @ApiTags('User Data Ingestion')
 @Controller('users')
@@ -38,7 +36,9 @@ export class UserDataIngestionController {
   ) {
     const authUserId = (req as any).user?.userId;
     if (!authUserId || authUserId !== userId) {
-      throw new ForbiddenException('You can only ingest data for your own userId');
+      throw new ForbiddenException(
+        'You can only ingest data for your own userId',
+      );
     }
 
     return this.userDataIngestionService.ingestHealthData(userId, dto);
@@ -46,7 +46,9 @@ export class UserDataIngestionController {
 
   @Get(':userId/health-data')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Retrieve merged health data for a user within a date range' })
+  @ApiOperation({
+    summary: 'Retrieve merged health data for a user within a date range',
+  })
   @UseGuards(JwtAuthGuard)
   getHealthData(
     @Param('userId') userId: string,
@@ -55,7 +57,9 @@ export class UserDataIngestionController {
   ) {
     const authUserId = (req as any).user?.userId;
     if (!authUserId || authUserId !== userId) {
-      throw new ForbiddenException('You can only retrieve data for your own userId');
+      throw new ForbiddenException(
+        'You can only retrieve data for your own userId',
+      );
     }
 
     return this.userDataIngestionService.getHealthDataMergedByTimestamp(
@@ -68,7 +72,9 @@ export class UserDataIngestionController {
   }
   @Get(':userId/summary')
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Basic aggregation summary for a user within a date range' })
+  @ApiOperation({
+    summary: 'Basic aggregation summary for a user within a date range',
+  })
   @UseGuards(JwtAuthGuard)
   getSummary(
     @Param('userId') userId: string,
@@ -77,10 +83,15 @@ export class UserDataIngestionController {
   ) {
     const authUserId = (req as any).user?.userId;
     if (!authUserId || authUserId !== userId) {
-      throw new ForbiddenException('You can only retrieve summary for your own userId');
+      throw new ForbiddenException(
+        'You can only retrieve summary for your own userId',
+      );
     }
 
-    return this.userDataIngestionService.getBasicSummary(userId, query.start, query.end);
+    return this.userDataIngestionService.getBasicSummary(
+      userId,
+      query.start,
+      query.end,
+    );
   }
-
 }

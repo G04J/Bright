@@ -2,8 +2,12 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { IngestHealthDto } from '../../dtos/user/userDataIngestion.dto';
 import { buildUtcDateRange } from '../../utils/dateRange.util';
-import { PrismaClient, ActivityType, MacroType, MicroType } from '@prisma/client';
-
+import {
+  PrismaClient,
+  ActivityType,
+  MacroType,
+  MicroType,
+} from '@prisma/client';
 
 function parseDDMMYYYY(s: string): Date {
   // expects "DD-MM-YYYY"
@@ -11,10 +15,14 @@ function parseDDMMYYYY(s: string): Date {
   if (!dd || !mm || !yyyy) throw new Error('Invalid date');
   const d = new Date(Date.UTC(yyyy, mm - 1, dd));
   // basic sanity check
-  if (d.getUTCFullYear() !== yyyy || d.getUTCMonth() !== mm - 1 || d.getUTCDate() !== dd) {
+  if (
+    d.getUTCFullYear() !== yyyy ||
+    d.getUTCMonth() !== mm - 1 ||
+    d.getUTCDate() !== dd
+  ) {
     throw new Error('Invalid date');
   }
-  return d; 
+  return d;
 }
 
 function addDaysUTC(d: Date, days: number) {
@@ -25,15 +33,23 @@ function addDaysUTC(d: Date, days: number) {
 type MergedHealthItem = {
   timestamp: string;
 
-  activity?: { steps?: number; cardioMinutes?: number; strengthMinutes?: number };
-  food?: { calories?: number | null; carbsGrams?: number; fatsGrams?: number; proteinGrams?: number };
+  activity?: {
+    steps?: number;
+    cardioMinutes?: number;
+    strengthMinutes?: number;
+  };
+  food?: {
+    calories?: number | null;
+    carbsGrams?: number;
+    fatsGrams?: number;
+    proteinGrams?: number;
+  };
   sleep?: { hours?: number | null; quality?: number | null };
   heart?: { bpm?: number | null; resting?: boolean };
   micros?: { potassiumMg?: number; calciumMg?: number; sodiumMg?: number };
   hydration?: { liters?: number | null };
   weight?: { weightKg?: number | null };
 };
-
 
 /**
  * Service responsible for ingesting and persisting user health data.
@@ -301,7 +317,7 @@ export class userDataIngestionService {
     });
   }
 
-    /**
+  /**
    * Retrieves health data merged into one object per exact timestamp.
    * Categories are merged only when timestamps match exactly.
    */
@@ -430,7 +446,8 @@ export class userDataIngestionService {
     }
 
     const allItems = Array.from(byTs.values()).sort(
-      (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
     );
 
     const total = allItems.length;
@@ -450,7 +467,7 @@ export class userDataIngestionService {
       items,
     };
   }
-  
+
   private async rebuildDailySummaryForDay(
     prisma: PrismaClient,
     userId: string,
@@ -491,28 +508,58 @@ export class userDataIngestionService {
 
     // Activity totals
     const activityMetrics = activities.flatMap((e) => e.metrics);
-    const stepsTotal = sum(activityMetrics.filter((m) => m.type === ActivityType.STEPS).map((m) => m.value));
-    const cardioMinutes = sum(activityMetrics.filter((m) => m.type === ActivityType.CARDIO).map((m) => m.value));
-    const strengthMinutes = sum(activityMetrics.filter((m) => m.type === ActivityType.STRENGTH).map((m) => m.value));
+    const stepsTotal = sum(
+      activityMetrics
+        .filter((m) => m.type === ActivityType.STEPS)
+        .map((m) => m.value),
+    );
+    const cardioMinutes = sum(
+      activityMetrics
+        .filter((m) => m.type === ActivityType.CARDIO)
+        .map((m) => m.value),
+    );
+    const strengthMinutes = sum(
+      activityMetrics
+        .filter((m) => m.type === ActivityType.STRENGTH)
+        .map((m) => m.value),
+    );
 
     // Food
-    const caloriesValues = foods.map((f) => f.calories).filter((v): v is number => v !== null && v !== undefined);
-    const caloriesAvg = caloriesValues.length ? sum(caloriesValues) / caloriesValues.length : 0;
+    const caloriesValues = foods
+      .map((f) => f.calories)
+      .filter((v): v is number => v !== null && v !== undefined);
+    const caloriesAvg = caloriesValues.length
+      ? sum(caloriesValues) / caloriesValues.length
+      : 0;
 
     const foodMetrics = foods.flatMap((f) => f.metrics);
-    const carbsGrams = sum(foodMetrics.filter((m) => m.type === MacroType.CARBS).map((m) => m.grams));
-    const fatsGrams = sum(foodMetrics.filter((m) => m.type === MacroType.FAT).map((m) => m.grams));
-    const proteinGrams = sum(foodMetrics.filter((m) => m.type === MacroType.PROTEIN).map((m) => m.grams));
+    const carbsGrams = sum(
+      foodMetrics.filter((m) => m.type === MacroType.CARBS).map((m) => m.grams),
+    );
+    const fatsGrams = sum(
+      foodMetrics.filter((m) => m.type === MacroType.FAT).map((m) => m.grams),
+    );
+    const proteinGrams = sum(
+      foodMetrics
+        .filter((m) => m.type === MacroType.PROTEIN)
+        .map((m) => m.grams),
+    );
 
     // Sleep
-    const sleepHoursValues = sleeps.map((s) => s.hours).filter((v): v is number => v !== null && v !== undefined);
-    const sleepQualityValues = sleeps.map((s) => s.quality).filter((v): v is number => v !== null && v !== undefined);
+    const sleepHoursValues = sleeps
+      .map((s) => s.hours)
+      .filter((v): v is number => v !== null && v !== undefined);
+    const sleepQualityValues = sleeps
+      .map((s) => s.quality)
+      .filter((v): v is number => v !== null && v !== undefined);
 
     const sleepHours = avg(sleepHoursValues);
     const sleepQualityAvg = avg(sleepQualityValues);
 
     // Heart
-    const bpmValues = hearts.map((h) => h.bpm).filter((v): v is number => v !== null && v !== undefined);
+    const bpmValues = hearts
+      .map((h) => h.bpm)
+      .filter((v): v is number => v !== null && v !== undefined);
     const restingBpmValues = hearts
       .filter((h) => h.resting)
       .map((h) => h.bpm)
@@ -523,17 +570,31 @@ export class userDataIngestionService {
 
     // Micros
     const microMetrics = micros.flatMap((m) => m.metrics);
-    const potassiumMg = sum(microMetrics.filter((m) => m.type === MicroType.POTASSIUM).map((m) => m.amountMg));
-    const calciumMg = sum(microMetrics.filter((m) => m.type === MicroType.CALCIUM).map((m) => m.amountMg));
-    const sodiumMg = sum(microMetrics.filter((m) => m.type === MicroType.SODIUM).map((m) => m.amountMg));
+    const potassiumMg = sum(
+      microMetrics
+        .filter((m) => m.type === MicroType.POTASSIUM)
+        .map((m) => m.amountMg),
+    );
+    const calciumMg = sum(
+      microMetrics
+        .filter((m) => m.type === MicroType.CALCIUM)
+        .map((m) => m.amountMg),
+    );
+    const sodiumMg = sum(
+      microMetrics
+        .filter((m) => m.type === MicroType.SODIUM)
+        .map((m) => m.amountMg),
+    );
 
     // Hydration
     const hydrationLiters = sum(
-      hydrations.map((h) => h.liters).filter((v): v is number => v !== null && v !== undefined),
+      hydrations
+        .map((h) => h.liters)
+        .filter((v): v is number => v !== null && v !== undefined),
     );
 
     // Weight (latest of the day)
-    const weightKg = weights.length ? weights[0].weightKg ?? null : null;
+    const weightKg = weights.length ? (weights[0].weightKg ?? null) : null;
 
     // day column must be a Date-only value. We store UTC midnight.
     const day = start;
@@ -621,26 +682,45 @@ export class userDataIngestionService {
     const totalSteps = rows.reduce((acc, r) => acc + (r.stepsTotal ?? 0), 0);
 
     // caloriesAvg is non-nullable in your schema, so treat missing days as "not present"
-    const caloriesValues = rows.map((r) => r.caloriesAvg).filter((v) => typeof v === 'number');
-    const caloriesRows = rows.filter((r) => r.caloriesAvg !== null && r.caloriesAvg !== undefined && r.caloriesAvg > 0);
+    const caloriesValues = rows
+      .map((r) => r.caloriesAvg)
+      .filter((v) => typeof v === 'number');
+    const caloriesRows = rows.filter(
+      (r) =>
+        r.caloriesAvg !== null &&
+        r.caloriesAvg !== undefined &&
+        r.caloriesAvg > 0,
+    );
 
-const averageCalories =
-  caloriesRows.length > 0
-    ? caloriesRows.reduce((a, r) => a + r.caloriesAvg, 0) / caloriesRows.length
-    : 0;
-
+    const averageCalories =
+      caloriesRows.length > 0
+        ? caloriesRows.reduce((a, r) => a + r.caloriesAvg, 0) /
+          caloriesRows.length
+        : 0;
 
     const sleepValues = rows
       .map((r) => r.sleepHours)
       .filter((v): v is number => v !== null && v !== undefined);
 
     const averageSleepHours =
-      sleepValues.length > 0 ? sleepValues.reduce((a, b) => a + b, 0) / sleepValues.length : null;
+      sleepValues.length > 0
+        ? sleepValues.reduce((a, b) => a + b, 0) / sleepValues.length
+        : 0;
+
 
     // Optional extras (handy for readme/demo)
-    const cardioMinutesTotal = rows.reduce((acc, r) => acc + (r.cardioMinutes ?? 0), 0);
-    const strengthMinutesTotal = rows.reduce((acc, r) => acc + (r.strengthMinutes ?? 0), 0);
-    const hydrationTotal = rows.reduce((acc, r) => acc + (r.hydrationLiters ?? 0), 0);
+    const cardioMinutesTotal = rows.reduce(
+      (acc, r) => acc + (r.cardioMinutes ?? 0),
+      0,
+    );
+    const strengthMinutesTotal = rows.reduce(
+      (acc, r) => acc + (r.strengthMinutes ?? 0),
+      0,
+    );
+    const hydrationTotal = rows.reduce(
+      (acc, r) => acc + (r.hydrationLiters ?? 0),
+      0,
+    );
 
     return {
       userId,
@@ -658,11 +738,12 @@ const averageCalories =
       daysCount: rows.length,
     };
   }
-
 }
 
 function dayBoundsUTC(input: Date) {
-  const start = new Date(Date.UTC(input.getUTCFullYear(), input.getUTCMonth(), input.getUTCDate()));
+  const start = new Date(
+    Date.UTC(input.getUTCFullYear(), input.getUTCMonth(), input.getUTCDate()),
+  );
   const end = new Date(start);
   end.setUTCDate(end.getUTCDate() + 1);
   return { start, end };
@@ -676,4 +757,3 @@ function avg(numbers: number[]) {
 function sum(numbers: number[]) {
   return numbers.reduce((a, b) => a + b, 0);
 }
-
