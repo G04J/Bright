@@ -113,6 +113,13 @@ Averages are calculated using only days where the corresponding metric was recor
 
 This design allows the application to serve analytics and insights efficiently while keeping raw health data intact for detailed inspection when needed.
 
+---
+
+## Test Coverage
+The project includes Jest unit tests covering core controllers and services. Current coverage is ~82% overall (for lines, however coverage for functions still has a lot of room for improvement), with 100% coverage for authentication and core service logic, and partial coverage for ingestion edge cases.
+
+---
+
 ## Further Improvements that could be done with more time
 
 There are a few areas that would be worth improving next as the project matures.
