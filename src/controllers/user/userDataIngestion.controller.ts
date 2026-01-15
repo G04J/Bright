@@ -18,6 +18,15 @@ import { IngestHealthDto } from '../../dtos/user/userDataIngestion.dto';
 import { GetHealthDataQueryDto } from '../../dtos/user/getHealthDataQuery.dto';
 import { GetSummaryQueryDto } from '../../dtos/user/getSummaryQuery.dto';
 
+type AuthedRequest = express.Request & {
+  user?: { userId?: string };
+};
+
+const getAuthUserId = (req: express.Request): string | undefined => {
+  const r = req as unknown as AuthedRequest;
+  return r.user?.userId;
+};
+
 @ApiTags('User Data Ingestion')
 @Controller('users')
 export class UserDataIngestionController {
@@ -34,7 +43,7 @@ export class UserDataIngestionController {
     @Body() dto: IngestHealthDto,
     @Req() req: express.Request,
   ) {
-    const authUserId = (req as any).user?.userId;
+    const authUserId = getAuthUserId(req);
     if (!authUserId || authUserId !== userId) {
       throw new ForbiddenException(
         'You can only ingest data for your own userId',
@@ -55,7 +64,7 @@ export class UserDataIngestionController {
     @Query() query: GetHealthDataQueryDto,
     @Req() req: express.Request,
   ) {
-    const authUserId = (req as any).user?.userId;
+    const authUserId = getAuthUserId(req);
     if (!authUserId || authUserId !== userId) {
       throw new ForbiddenException(
         'You can only retrieve data for your own userId',
@@ -70,6 +79,7 @@ export class UserDataIngestionController {
       query.limit,
     );
   }
+
   @Get(':userId/summary')
   @ApiBearerAuth()
   @ApiOperation({
@@ -79,9 +89,9 @@ export class UserDataIngestionController {
   getSummary(
     @Param('userId') userId: string,
     @Query() query: GetSummaryQueryDto,
-    @Req() req: Request,
+    @Req() req: express.Request,
   ) {
-    const authUserId = (req as any).user?.userId;
+    const authUserId = getAuthUserId(req);
     if (!authUserId || authUserId !== userId) {
       throw new ForbiddenException(
         'You can only retrieve summary for your own userId',

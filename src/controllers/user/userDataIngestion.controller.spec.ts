@@ -1,13 +1,31 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ForbiddenException } from '@nestjs/common';
+import express from 'express';
+
 import { UserDataIngestionController } from './userDataIngestion.controller';
 import { userDataIngestionService } from '../../services/user/userDataIngestion.service';
+import { IngestHealthDto } from '../../dtos/user/userDataIngestion.dto';
 
-describe('UserController - ingestHealth', () => {
+type AuthedRequestLike = {
+  user?: {
+    userId?: string;
+  };
+};
+
+// typed service mock so no implicit any
+type UserDataIngestionServiceMock = {
+  ingestHealthData: jest.Mock;
+  getHealthDataMergedByTimestamp: jest.Mock;
+  getBasicSummary: jest.Mock;
+};
+
+describe('UserDataIngestionController (POST health-data)', () => {
   let controller: UserDataIngestionController;
 
-  const userDataIngestionServiceMock = {
+  const mockuserDataIngestionService: UserDataIngestionServiceMock = {
     ingestHealthData: jest.fn(),
+    getHealthDataMergedByTimestamp: jest.fn(),
+    getBasicSummary: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -16,7 +34,7 @@ describe('UserController - ingestHealth', () => {
       providers: [
         {
           provide: userDataIngestionService,
-          useValue: userDataIngestionServiceMock,
+          useValue: mockuserDataIngestionService,
         },
       ],
     }).compile();
@@ -24,42 +42,59 @@ describe('UserController - ingestHealth', () => {
     controller = module.get<UserDataIngestionController>(
       UserDataIngestionController,
     );
+  });
+
+  afterEach(() => {
     jest.clearAllMocks();
   });
 
-  it('throws 403 when JWT userId does not match path userId', () => {
-    const req: any = { user: { userId: 'jwt-user' } };
+  it('should forbid if token userId does not match param userId', () => {
+    const userIdParam = 'user-abc';
 
-    expect(() =>
-      controller.ingestHealth(
-        'path-user',
-        { activity: { steps: 10 } } as any,
-        req,
-      ),
-    ).toThrow(ForbiddenException);
+    const dto: IngestHealthDto = {
+      timestamp: '2026-01-15T00:00:00.000Z',
+      activity: { steps: 10, cardioMinutes: 2, strengthMinutes: 1 },
+      food: { calories: 100, carbsGrams: 10, fatsGrams: 2, proteinGrams: 5 },
+      sleep: { hours: 7, quality: 4 },
+    };
 
-    expect(
-      userDataIngestionServiceMock.ingestHealthData,
-    ).not.toHaveBeenCalled();
+    const reqLike: AuthedRequestLike = {
+      user: { userId: 'different-user' },
+    };
+
+    const req = reqLike as unknown as express.Request;
+
+    expect(() => controller.ingestHealth(userIdParam, dto, req)).toThrow(
+      ForbiddenException,
+    );
   });
 
-  it('calls userDataIngestionService when JWT userId matches path userId', async () => {
-    const req: any = { user: { userId: 'same-user' } };
+  it('should call service when authorized', async () => {
+    const userIdParam = 'user-abc';
 
-    userDataIngestionServiceMock.ingestHealthData.mockResolvedValueOnce({
+    const dto: IngestHealthDto = {
+      timestamp: '2026-01-15T00:00:00.000Z',
+      activity: { steps: 10, cardioMinutes: 2, strengthMinutes: 1 },
+      food: { calories: 100, carbsGrams: 10, fatsGrams: 2, proteinGrams: 5 },
+      sleep: { hours: 7, quality: 4 },
+    };
+
+    const reqLike: AuthedRequestLike = {
+      user: { userId: userIdParam },
+    };
+
+    const req = reqLike as unknown as express.Request;
+
+    mockuserDataIngestionService.ingestHealthData.mockResolvedValueOnce({
       ok: true,
     });
 
-    const res = await controller.ingestHealth(
-      'same-user',
-      { activity: { steps: 10 } } as any,
-      req,
-    );
+    const result = await controller.ingestHealth(userIdParam, dto, req);
 
-    expect(userDataIngestionServiceMock.ingestHealthData).toHaveBeenCalledWith(
-      'same-user',
-      expect.any(Object),
+    expect(mockuserDataIngestionService.ingestHealthData).toHaveBeenCalledWith(
+      userIdParam,
+      dto,
     );
-    expect(res).toEqual({ ok: true });
+    expect(result).toEqual({ ok: true });
   });
 });

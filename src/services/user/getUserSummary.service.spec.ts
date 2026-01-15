@@ -2,6 +2,21 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException } from '@nestjs/common';
 import { userDataIngestionService } from './userDataIngestion.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { IngestHealthDto } from '../../dtos/user/userDataIngestion.dto';
+
+type PrismaReadMock = {
+  activityEntry: { findMany: jest.Mock };
+  foodEntry: { findMany: jest.Mock };
+  sleepEntry: { findMany: jest.Mock };
+  heartEntry: { findMany: jest.Mock };
+  microEntry: { findMany: jest.Mock };
+  hydrationEntry: { findMany: jest.Mock };
+  weightEntry: { findMany: jest.Mock };
+};
+
+type PrismaSummaryReadMock = {
+  dailySummary: { findMany: jest.Mock };
+};
 
 type MockTx = {
   activityEntry: { create: jest.Mock; findMany: jest.Mock };
@@ -22,11 +37,17 @@ type MockTx = {
   dailySummary: { upsert: jest.Mock };
 };
 
+type PrismaTxMock = {
+  $transaction: jest.Mock;
+};
+
+type TransactionFn = (tx: MockTx) => Promise<unknown>;
+
 describe('userDataIngestionService', () => {
   let service: userDataIngestionService;
 
   describe('getHealthDataMergedByTimestamp', () => {
-    let prismaMock: any;
+    let prismaMock: PrismaReadMock;
 
     beforeEach(async () => {
       prismaMock = {
@@ -42,13 +63,14 @@ describe('userDataIngestionService', () => {
       const module: TestingModule = await Test.createTestingModule({
         providers: [
           userDataIngestionService,
-          { provide: PrismaService, useValue: prismaMock },
+          {
+            provide: PrismaService,
+            useValue: prismaMock as unknown as PrismaService,
+          },
         ],
       }).compile();
 
-      service = module.get<userDataIngestionService>(
-        userDataIngestionService,
-      );
+      service = module.get<userDataIngestionService>(userDataIngestionService);
     });
 
     it('should merge categories when timestamps match exactly', async () => {
@@ -163,7 +185,6 @@ describe('userDataIngestionService', () => {
 
       expect(result.items).toHaveLength(2);
 
-      // Ensure sorted desc
       expect(result.items[0].timestamp).toBe('2026-01-19T00:00:00.000Z');
       expect(result.items[0].sleep).toEqual({ hours: 6.5, quality: 3 });
 
@@ -226,41 +247,41 @@ describe('userDataIngestionService', () => {
   });
 
   describe('ingestHealthData', () => {
-  const makePrismaMock = () => {
-    const tx: MockTx = {
-      activityEntry: { create: jest.fn(), findMany: jest.fn() },
-      activityMetric: { createMany: jest.fn() },
+    const makePrismaMock = (): { prisma: PrismaTxMock; tx: MockTx } => {
+      const tx: MockTx = {
+        activityEntry: { create: jest.fn(), findMany: jest.fn() },
+        activityMetric: { createMany: jest.fn() },
 
-      foodEntry: { create: jest.fn(), findMany: jest.fn() },
-      foodMetric: { createMany: jest.fn() },
+        foodEntry: { create: jest.fn(), findMany: jest.fn() },
+        foodMetric: { createMany: jest.fn() },
 
-      sleepEntry: { create: jest.fn(), findMany: jest.fn() },
-      heartEntry: { create: jest.fn(), findMany: jest.fn() },
+        sleepEntry: { create: jest.fn(), findMany: jest.fn() },
+        heartEntry: { create: jest.fn(), findMany: jest.fn() },
 
-      microEntry: { create: jest.fn(), findMany: jest.fn() },
-      microMetric: { createMany: jest.fn() },
+        microEntry: { create: jest.fn(), findMany: jest.fn() },
+        microMetric: { createMany: jest.fn() },
 
-      hydrationEntry: { create: jest.fn(), findMany: jest.fn() },
-      weightEntry: { create: jest.fn(), findMany: jest.fn() },
+        hydrationEntry: { create: jest.fn(), findMany: jest.fn() },
+        weightEntry: { create: jest.fn(), findMany: jest.fn() },
 
-      dailySummary: { upsert: jest.fn() },
+        dailySummary: { upsert: jest.fn() },
+      };
+
+      // Summary rebuild reads. Default to no rows for the day.
+      tx.activityEntry.findMany.mockResolvedValue([]);
+      tx.foodEntry.findMany.mockResolvedValue([]);
+      tx.sleepEntry.findMany.mockResolvedValue([]);
+      tx.heartEntry.findMany.mockResolvedValue([]);
+      tx.microEntry.findMany.mockResolvedValue([]);
+      tx.hydrationEntry.findMany.mockResolvedValue([]);
+      tx.weightEntry.findMany.mockResolvedValue([]);
+
+      const prisma: PrismaTxMock = {
+        $transaction: jest.fn((fn: TransactionFn) => fn(tx)),
+      };
+
+      return { prisma, tx };
     };
-
-    // Summary rebuild reads. Default to no rows for the day.
-    tx.activityEntry.findMany.mockResolvedValue([]);
-    tx.foodEntry.findMany.mockResolvedValue([]);
-    tx.sleepEntry.findMany.mockResolvedValue([]);
-    tx.heartEntry.findMany.mockResolvedValue([]);
-    tx.microEntry.findMany.mockResolvedValue([]);
-    tx.hydrationEntry.findMany.mockResolvedValue([]);
-    tx.weightEntry.findMany.mockResolvedValue([]);
-
-    const prisma = {
-      $transaction: jest.fn(async (fn: any) => fn(tx)),
-    };
-
-    return { prisma, tx };
-  };
 
     beforeEach(() => {
       jest.useFakeTimers().setSystemTime(new Date('2026-01-15T00:00:00.000Z'));
@@ -273,10 +294,12 @@ describe('userDataIngestionService', () => {
 
     it('throws BadRequestException when no sections are provided', async () => {
       const { prisma } = makePrismaMock();
-      service = new userDataIngestionService(prisma as any);
+      service = new userDataIngestionService(
+        prisma as unknown as PrismaService,
+      );
 
       await expect(
-        service.ingestHealthData('u1', {} as any),
+        service.ingestHealthData('u1', {} as IngestHealthDto),
       ).rejects.toBeInstanceOf(BadRequestException);
 
       expect(prisma.$transaction).not.toHaveBeenCalled();
@@ -284,7 +307,9 @@ describe('userDataIngestionService', () => {
 
     it('persists only the provided sections and returns created ids', async () => {
       const { prisma, tx } = makePrismaMock();
-      service = new userDataIngestionService(prisma as any);
+      service = new userDataIngestionService(
+        prisma as unknown as PrismaService,
+      );
 
       tx.activityEntry.create.mockResolvedValueOnce({ id: 'act1' });
       tx.foodEntry.create.mockResolvedValueOnce({ id: 'food1' });
@@ -295,14 +320,14 @@ describe('userDataIngestionService', () => {
 
       tx.dailySummary.upsert.mockResolvedValueOnce({ id: 'sum1' });
 
-      const dto = {
+      const dto: IngestHealthDto = {
         timestamp: '2026-01-15T00:00:00.000Z',
         activity: { steps: 10, cardioMinutes: 2, strengthMinutes: 1 },
         food: { calories: 100, carbsGrams: 10, fatsGrams: 2, proteinGrams: 5 },
         sleep: { hours: 7, quality: 4 },
       };
 
-      const result = await service.ingestHealthData('u1', dto as any);
+      const result = await service.ingestHealthData('u1', dto);
 
       expect(prisma.$transaction).toHaveBeenCalledTimes(1);
 
@@ -349,17 +374,19 @@ describe('userDataIngestionService', () => {
 
     it('creates no metrics when metric values are missing (but creates entry)', async () => {
       const { prisma, tx } = makePrismaMock();
-      service = new userDataIngestionService(prisma as any);
+      service = new userDataIngestionService(
+        prisma as unknown as PrismaService,
+      );
 
       tx.activityEntry.create.mockResolvedValueOnce({ id: 'act1' });
       tx.dailySummary.upsert.mockResolvedValueOnce({ id: 'sum1' });
 
-      const dto = {
+      const dto: IngestHealthDto = {
         timestamp: '2026-01-15T00:00:00.000Z',
         activity: {},
       };
 
-      const result = await service.ingestHealthData('u1', dto as any);
+      const result = await service.ingestHealthData('u1', dto);
 
       expect(tx.activityEntry.create).toHaveBeenCalledTimes(1);
       expect(tx.activityMetric.createMany).not.toHaveBeenCalled();
@@ -371,7 +398,7 @@ describe('userDataIngestionService', () => {
   });
 
   describe('getBasicSummary', () => {
-    let prismaMock: any;
+    let prismaMock: PrismaSummaryReadMock;
 
     beforeEach(async () => {
       prismaMock = {
@@ -383,13 +410,14 @@ describe('userDataIngestionService', () => {
       const module: TestingModule = await Test.createTestingModule({
         providers: [
           userDataIngestionService,
-          { provide: PrismaService, useValue: prismaMock },
+          {
+            provide: PrismaService,
+            useValue: prismaMock as unknown as PrismaService,
+          },
         ],
       }).compile();
 
-      service = module.get<userDataIngestionService>(
-        userDataIngestionService,
-      );
+      service = module.get<userDataIngestionService>(userDataIngestionService);
     });
 
     afterEach(() => {
@@ -468,9 +496,7 @@ describe('userDataIngestionService', () => {
       expect(result.totals.totalSteps).toBe(6);
       expect(result.totals.cardioMinutesTotal).toBe(5);
       expect(result.totals.strengthMinutesTotal).toBe(3);
-      // averageCalories should be (4 + 6) / 2 = 5
       expect(result.averages.averageCalories).toBe(5);
-      // sleep average is (6 + 8) / 2 = 7 (null ignored)
       expect(result.averages.averageSleepHours).toBe(7);
     });
   });

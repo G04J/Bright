@@ -306,7 +306,11 @@ export class userDataIngestionService {
       }
 
       // Build or refresh the daily summary for this user's day (same day as timestamp)
-      await this.rebuildDailySummaryForDay(tx as any, userId, timestamp);
+      await this.rebuildDailySummaryForDay(
+        tx as PrismaClient,
+        userId,
+        timestamp,
+      );
 
       return {
         message: 'Health data ingested successfully',
@@ -682,9 +686,7 @@ export class userDataIngestionService {
     const totalSteps = rows.reduce((acc, r) => acc + (r.stepsTotal ?? 0), 0);
 
     // caloriesAvg is non-nullable in your schema, so treat missing days as "not present"
-    const caloriesValues = rows
-      .map((r) => r.caloriesAvg)
-      .filter((v) => typeof v === 'number');
+
     const caloriesRows = rows.filter(
       (r) =>
         r.caloriesAvg !== null &&
@@ -706,7 +708,6 @@ export class userDataIngestionService {
       sleepValues.length > 0
         ? sleepValues.reduce((a, b) => a + b, 0) / sleepValues.length
         : 0;
-
 
     // Optional extras (handy for readme/demo)
     const cardioMinutesTotal = rows.reduce(

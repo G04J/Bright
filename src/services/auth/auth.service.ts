@@ -7,6 +7,13 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 
+type JwtPayload = {
+  sub: string;
+  email: string;
+  iat?: number;
+  exp?: number;
+};
+
 /**
  * Service responsible for authentication operations including user registration,
  * login, and token validation.
@@ -115,15 +122,14 @@ export class AuthService {
    *
    * @example
    * ```typescript
-   * const payload = await authService.validateToken('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
+   * const payload = authService.validateToken('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
    * // Returns: { sub: '...', email: '...', iat: ..., exp: ... }
    * ```
    */
-  async validateToken(token: string) {
+  validateToken(token: string): JwtPayload {
     try {
-      const payload = this.jwtService.verify(token);
-      return payload;
-    } catch (error) {
+      return this.jwtService.verify<JwtPayload>(token);
+    } catch {
       throw new UnauthorizedException('Invalid token');
     }
   }
