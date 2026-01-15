@@ -20,7 +20,10 @@ export function parseDDMMYYYY(input: string): Date {
  * Returns a range where start is inclusive and end is exclusive.
  * End becomes the next day at 00:00:00 UTC.
  */
-export function buildUtcDateRange(start: string, end: string): { gte: Date; lt: Date } {
+export function buildUtcDateRange(
+  start: string,
+  end: string,
+): { gte: Date; lt: Date } {
   const startDate = parseDDMMYYYY(start);
   const endDate = parseDDMMYYYY(end);
 

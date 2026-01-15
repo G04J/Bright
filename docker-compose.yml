@@ -11,5 +11,19 @@ services:
     volumes:
       - bright_pgdata:/var/lib/postgresql/data
 
+  api:
+    build: .
+    container_name: bright-api
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      JWT_SECRET: your-secret-key
+      JWT_EXPIRES_IN: 1d
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/bright?schema=public
+    depends_on:
+      - db
+
 volumes:
   bright_pgdata:

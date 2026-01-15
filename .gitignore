@@ -5,3 +5,4 @@ dist
 
 # Prisma
 prisma/.env
+.env.docker
