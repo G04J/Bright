@@ -17,6 +17,8 @@ import { JwtAuthGuard } from '../../services/auth/jwt.guard';
 import { userDataIngestionService } from '../../services/user/userDataIngestion.service';
 import { IngestHealthDto } from '../../dtos/user/userDataIngestion.dto';
 import { GetHealthDataQueryDto } from '../../dtos/user/getHealthDataQuery.dto';
+import { GetSummaryQueryDto } from '../../dtos/user/getSummaryQuery.dto';
+
 
 @ApiTags('User Data Ingestion')
 @Controller('users')
@@ -63,6 +65,22 @@ export class UserDataIngestionController {
       query.page,
       query.limit,
     );
+  }
+  @Get(':userId/summary')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Basic aggregation summary for a user within a date range' })
+  @UseGuards(JwtAuthGuard)
+  getSummary(
+    @Param('userId') userId: string,
+    @Query() query: GetSummaryQueryDto,
+    @Req() req: Request,
+  ) {
+    const authUserId = (req as any).user?.userId;
+    if (!authUserId || authUserId !== userId) {
+      throw new ForbiddenException('You can only retrieve summary for your own userId');
+    }
+
+    return this.userDataIngestionService.getBasicSummary(userId, query.start, query.end);
   }
 
 }
