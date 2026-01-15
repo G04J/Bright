@@ -376,47 +376,6 @@ npm run test:watch            # Watch mode
 npm run test:e2e              # End-to-end tests
 npm run test:cov              # Coverage report
 ```
-
----
-
-## Adding New Features
-
-### Step 1: Create Module
-
-```bash
-nest generate module feature-name
-```
-
-### Step 2: Create Service
-
-```bash
-nest generate service feature-name
-```
-
-### Step 3: Create Controller
-
-```bash
-nest generate controller feature-name
-```
-
-### Step 4: Create DTOs
-
-Create files in `src/dtos/feature-name/`:
-- `create-feature.dto.ts`
-- `update-feature.dto.ts`
-- `query-feature.dto.ts`
-
-### Step 5: Add to App Module
-
-Import the new module in `src/app.module.ts`.
-
-### Step 6: Add Prisma Models (if needed)
-
-Update `prisma/schema.prisma` and run:
-```bash
-npx prisma migrate dev --name add_feature_name
-```
-
 ---
 
 ## Environment-Specific Configuration
