@@ -11,6 +11,8 @@ datasource db {
 model User {
   id        String   @id @default(uuid())
   email     String   @unique
+  passwordHash String
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -63,7 +65,7 @@ model FoodEntry {
   userId    String
   timestamp DateTime @db.Timestamp()
 
-  calories  Float?   // kcal consumed, provided by user
+  calories  Float? 
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -75,11 +77,23 @@ model FoodEntry {
   @@map("food_entries")
 }
 
+model FoodMetric {
+  id      String    @id @default(cuid())
+  entryId String
+  grams   Float     @db.DoublePrecision
+  type    MacroType
+
+  entry   FoodEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+
+  @@index([entryId])
+  @@map("food_metrics")
+}
 
 enum MacroType {
-  CARBS
-  FATS
+  CALORIES
   PROTEIN
+  CARBS
+  FAT
 }
 
 // Sleep
@@ -195,6 +209,7 @@ model DailySummary {
   strengthMinutes Int @default(0)
 
   // Food (macros)
+  caloriesAvg Float @default(0) 
   carbsGrams   Float @default(0)
   fatsGrams    Float @default(0)
   proteinGrams Float @default(0)
