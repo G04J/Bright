@@ -139,6 +139,9 @@ The current daily summary retrieval can be improved by:
 ### Increase Coverage Quality
 Line coverage is in a good place, but function coverage can remain low when only main branches are exercised. This will raise function coverage and make the suite more representative of real usage.
 
+### More comments 
+More comments and descriptions and java docs could be added to the files and the functions to improve readability and increase efficiency in team work. 
+
 ### Split userDataIngestion.service.ts into Smaller Modules
 The `userDataIngestion.service.ts` file is currently doing ingestion, merging, and summary rebuilding in one place. Splitting it into smaller files would improve readability and long term maintainability. 
 
